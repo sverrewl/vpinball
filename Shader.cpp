@@ -14,6 +14,10 @@
 static ShaderTechniques m_bound_technique = ShaderTechniques::SHADER_TECHNIQUE_INVALID;
 #endif
 
+#ifdef __STANDALONE__
+#include <sstream>
+#endif
+
 #if DEBUG_LEVEL_LOG == 0
 #define LOG(a,b,c)
 #endif
@@ -1007,9 +1011,10 @@ void Shader::LOG(const int level, const string& fileNameRoot, const string& mess
          logFile = new std::ofstream();
 bla:
          logFile->open(name);
+#ifndef __STANDALONE__
          if (!logFile->is_open()) {
-            const wstring wzMkPath = g_pvp->m_wzMyPath + L"glshader";
-            if (_wmkdir(wzMkPath.c_str()) != 0 || _wmkdir((wzMkPath + L"\\log").c_str()) != 0)
+            const wstring wzMkPath = g_pvp->m_wzMyPath + L"glshader" + PATH_SEPARATOR_WCHAR + L"log";
+            if (_wmkdir((wzMkPath).c_str()) != 0)
             {
                 char msg[512];
                 TCHAR full_path[MAX_PATH];
@@ -1020,6 +1025,7 @@ bla:
             else
                 goto bla;
          }
+#endif
       }
       switch (level) {
       case 1:
@@ -1068,6 +1074,9 @@ bool Shader::parseFile(const string& fileNameRoot, const string& fileName, int l
       size_t linenumber = 0;
       while (getline(glfxFile, line))
       {
+#ifdef __STANDALONE__
+         line = std::regex_replace(line, std::regex("\\s+$"), string(""));
+#endif
          linenumber++;
          if (line.compare(0, 4, "////") == 0) {
             string newMode = line.substr(4, line.length() - 4);
@@ -1384,6 +1393,37 @@ string Shader::analyzeFunction(const string& shaderCodeName, const string& _tech
    return functionCode;
 }
 
+#ifdef __STANDALONE__
+string Shader::preprocessGLShader(const string& shaderCode) {
+   std::istringstream iss(shaderCode);
+   string header;
+   string extensions;
+   string code;
+
+   for (std::string line; std::getline(iss, line); )
+   {
+      if (line.compare(0, 9, "#version ") == 0) {
+#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+         header += "#version 410\n#define __APPLE__\n";
+#elif defined(__OPENGLES__)
+         header += "#version 310 es\n#define __OPENGLES__\n";
+#else
+         header += line + "\n";
+#endif
+         header += "#define __STANDALONE__\n\n";
+      }
+      else if (line.compare(0, 11, "#extension ") == 0) {
+         extensions.append(line).append("\n");
+      }
+      else {
+         code.append(line).append("\n");
+      }
+   }
+
+   return header + extensions + code;
+}
+#endif
+
 bool Shader::Load(const std::string& name, const BYTE* code, unsigned int codeSize)
 {
    m_shaderCodeName = name;
@@ -1450,6 +1490,9 @@ bool Shader::Load(const std::string& name, const BYTE* code, unsigned int codeSi
                string vertexShaderCode = vertex;
                vertexShaderCode.append("\n//").append(_technique).append("\n//").append(element[2]).append("\n");
                vertexShaderCode.append(analyzeFunction(m_shaderCodeName, _technique, element[2], values)).append("\0");
+#ifdef __STANDALONE__
+               vertexShaderCode = preprocessGLShader(vertexShaderCode);
+#endif
                string geometryShaderCode;
                if (elem == 5 && element[3].length() > 0)
                {
@@ -1457,9 +1500,15 @@ bool Shader::Load(const std::string& name, const BYTE* code, unsigned int codeSi
                   geometryShaderCode.append("\n//").append(_technique).append("\n//").append(element[3]).append("\n");
                   geometryShaderCode.append(analyzeFunction(m_shaderCodeName, _technique, element[3], values)).append("\0");
                }
+#ifdef __STANDALONE__
+               geometryShaderCode = preprocessGLShader(geometryShaderCode);
+#endif
                string fragmentShaderCode = fragment;
                fragmentShaderCode.append("\n//").append(_technique).append("\n//").append(element[elem - 1]).append("\n");
                fragmentShaderCode.append(analyzeFunction(m_shaderCodeName, _technique, element[elem - 1], values)).append("\0");
+#ifdef __STANDALONE__
+               fragmentShaderCode = preprocessGLShader(fragmentShaderCode);
+#endif
                ShaderTechnique* build = compileGLShader(technique, m_shaderCodeName, element[0] /*.append("_").append(element[1])*/, vertexShaderCode, geometryShaderCode, fragmentShaderCode);
                if (build != nullptr)
                {

@@ -1198,7 +1198,7 @@ copy "$(MSBuildProjectDirectory)\dll\x64\*.dll" "%25VPIN_DIR%25"
     <ClInclude Include="inc\bass.h" />
     <ClInclude Include="inc\forsyth.h" />
     <ClInclude Include="inc\freeimage.h" />
-    <ClInclude Include="inc\glad\glad.h" />
+    <ClInclude Include="inc\glad\glad\glad.h" />
     <ClInclude Include="inc\gpuprofiler.h" />
     <ClInclude Include="inc\hidpi.h" />
     <ClInclude Include="inc\hidsdi.h" />

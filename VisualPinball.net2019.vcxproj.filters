@@ -1558,7 +1558,7 @@
     <ClInclude Include="inc\stb_image_write.h">
       <Filter>inc</Filter>
     </ClInclude>
-    <ClInclude Include="inc\glad\glad.h">
+    <ClInclude Include="inc\glad\glad\glad.h">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="imgui\imgui_impl_opengl3.h">
